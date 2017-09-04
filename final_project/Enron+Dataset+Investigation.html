@@ -11922,8 +11922,18 @@ Tuning is selecting the best <strong>hyperparameters</strong> for an algorithm t
 <p>The F1 score can be interpreted as a weighted average of the precision and recall, where an F1 score reaches its best value at 1 and worst score at 0. The relative contribution of precision and recall to the F1 score are equal. 
 <a href="http://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score">http://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score</a></p>
 <p><code>GridSearchCV</code> will perform the cross-validation internally. That is, using 'StratifiedShuffleSplit' as the cross-validation method, <code>GridSearchCV</code> will, internally, create the 1000 test/train splits and return the parameters for which the f1 score is highest.</p>
-<p>It seemed like SVC and KNN tuning did not meet the project requirements of 0.3 Precision and 0.3 recall, so I began parameter tuning on the DT model.</p>
-<table>
+<p>The goal of hyperparameter optimisation is to squeeze out better performance from an algorithm - however if we tune our classifier too much it will be prone to overfitting and will not generalise well to new data thrown at it. The more tuned the parameters of a classifier algorithm, the more biased the algorithm will be to the training data and test set. This strategy can be effective, but it can also lead to more fragile models that are prone to overfitting test data and don’t perform as well in practice.</p>
+<p>The following parameters were tuned for each classifier</p>
+
+<pre><code>    linear_parameters = dict(linear_SVC__tol = [0.0001, 0.001, 0.01, 0.1, 1],
+                         linear_SVC__max_iter = [1000, 10000],
+                         linear_SVC__C = [0.01, 0.03, 0.1, 0.3, 1, 3, 10])
+
+    knn_parameters = dict(KNN__weights = ['uniform', 'distance'],
+                          KNN__n_neighbors = [3, 5, 15, 21],
+                          KNN__p = [1, 2, 3],
+                          KNN__leaf_size = [30, 50, 70, 100])</code></pre>
+<h4 id="SVC-and-KNN-Results">SVC and KNN Results<a class="anchor-link" href="#SVC-and-KNN-Results">&#182;</a></h4><table>
 <thead><tr>
 <th>Classifier</th>
 <th>Accuracy)</th>
@@ -11949,6 +11959,12 @@ Tuning is selecting the best <strong>hyperparameters</strong> for an algorithm t
 </tr>
 </tbody>
 </table>
+<p>It seemed like SVC and KNN tuning did not meet the project requirements of 0.3 Precision and 0.3 recall, so I began parameter tuning on the DT model.</p>
+
+<pre><code>    DT_parameters = dict(DT__min_samples_leaf=range(1, 5),
+                          DT__max_depth=range(1, 5),
+                          DT__class_weight=['balanced'],
+                          DT__criterion=['gini', 'entropy'])</code></pre>
 <h4 id="Feature-Selection">Feature Selection<a class="anchor-link" href="#Feature-Selection">&#182;</a></h4><p>During the hyperparameter-tuning process we can see how the value of K in <code>SelectKBest</code> features has been exhaustively tested.  It was found that 17 features was the optimum amount of features for maximised F1 score.</p>
 <p><img src="img/tune_k.png"></p>
 <table>

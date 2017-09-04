@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 sys.path.append("../tools/")
 
 from feature_format import featureFormat, targetFeatureSplit
-from tester import dump_classifier_and_data, test_classifier, test_classifier_verbose
+from tester import dump_classifier_and_data, test_classifier
+from tester_verbose import test_classifier_verbose
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from build_classifier import create_classifier_pipeline_gs, create_default_classifer
@@ -169,6 +170,7 @@ if TEST_BASIC_ALGORITHMS:
 ### TUNE EACH CLASSIFIER PARAMETERS
 
 TUNE_LINEAR_SVC = False
+
 if TUNE_LINEAR_SVC:
     linear_parameters = dict(linear_SVC__tol = [0.0001, 0.001, 0.01, 0.1, 1],
                          linear_SVC__max_iter = [1000, 10000],
@@ -186,6 +188,7 @@ if TUNE_LINEAR_SVC:
 
 
 TUNE_KNN = False
+
 if TUNE_KNN:
     knn_parameters = dict(KNN__weights = ['uniform', 'distance'],
                           KNN__n_neighbors = [3, 5, 15, 21],
@@ -201,6 +204,7 @@ if TUNE_KNN:
     test_classifier(knn_best, my_dataset, features_list)
     
 TUNE_DT = False
+
 if TUNE_DT:
     DT_parameters = dict(DT__min_samples_leaf=range(1, 5),
               DT__max_depth=range(1, 5),
@@ -218,6 +222,7 @@ if TUNE_DT:
 #Verbose version of TUNE_DT, used to produce a graph
 
 TUNE_DT_GRAPH = False
+
 k_results = {}
 if TUNE_DT_GRAPH:
     for i in range(2,len(features_list)):
@@ -258,9 +263,6 @@ if TUNE_DT_GRAPH:
     ax.legend(loc="upper left", bbox_to_anchor=(0.6,0.4))
 
 
-        
-        
-        
 
 ### Final classifer
 

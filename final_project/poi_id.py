@@ -7,13 +7,13 @@ import matplotlib.pyplot as plt
 sys.path.append("../tools/")
 
 from feature_format import featureFormat, targetFeatureSplit
-from tester import dump_classifier_and_data, test_classifier
+from tester import dump_classifier_and_data, test_classifier, test_classifier_verbose
 from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import SelectKBest
 from sklearn.preprocessing import MinMaxScaler
 from build_classifier import create_classifier_pipeline_gs, create_default_classifer
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.feature_selection import SelectKBest
 import feature_selection
 import pandas as pd
 import numpy as np
@@ -175,14 +175,14 @@ if TUNE_LINEAR_SVC:
                          linear_SVC__C = [0.01, 0.03, 0.1, 0.3, 1, 3, 10])
     
     #Create GridSearchCV for Linear SVC
-    cv_linear = create_classifier_pipeline_gs("linear_SVC", my_dataset,my_features, 
+    cv_linear = create_classifier_pipeline_gs("linear_SVC", my_dataset,features_list, 
                                 parameters = linear_parameters)
     
     linear_svc_best = cv_linear.best_estimator_
     print "Best parameters for linear SVC"
     print ""
     print cv_linear.best_params_
-    test_classifier(linear_svc_best, my_dataset, my_features)
+    test_classifier(linear_svc_best, my_dataset, features_list)
 
 
 TUNE_KNN = False
@@ -192,30 +192,75 @@ if TUNE_KNN:
                           KNN__p = [1, 2, 3],
                           KNN__leaf_size = [30, 50, 70, 100])
     
-    cv_knn = create_classifier_pipeline_gs("KNN", my_dataset,my_features, 
+    cv_knn = create_classifier_pipeline_gs("KNN", my_dataset,features_list, 
                                 parameters = knn_parameters)
     knn_best = cv_knn.best_estimator_
     print "Best parameters for KNN"
     print ""
     print cv_knn.best_params_
-    test_classifier(knn_best, my_dataset, my_features)
+    test_classifier(knn_best, my_dataset, features_list)
     
-
 TUNE_DT = False
 if TUNE_DT:
     DT_parameters = dict(DT__min_samples_leaf=range(1, 5),
-                          DT__max_depth=range(1, 5),
-                          DT__class_weight=['balanced'],
-                          DT__criterion=['gini', 'entropy'])
-    
-    cv_DT = create_classifier_pipeline_gs("DT", my_dataset, my_features, 
-                                parameters = DT_parameters)
-    
+              DT__max_depth=range(1, 5),
+              DT__class_weight=['balanced'],
+              DT__criterion=['gini', 'entropy'],
+              skb__k = np.arange(2, len(features_list)))
+     
+    cv_DT = create_classifier_pipeline_gs("DT", my_dataset, features_list, 
+                                    parameters = DT_parameters)
     dt_best = cv_DT.best_estimator_
     print "Best parameters for dt"
     print ""
     print cv_DT.best_params_
-    test_classifier(dt_best, my_dataset, my_features)
+
+#Verbose version of TUNE_DT, used to produce a graph
+
+TUNE_DT_GRAPH = False
+k_results = {}
+if TUNE_DT_GRAPH:
+    for i in range(2,len(features_list)):
+        
+        DT_parameters = dict(DT__min_samples_leaf=range(1, 5),
+              DT__max_depth=range(1, 5),
+              DT__class_weight=['balanced'],
+              DT__criterion=['gini', 'entropy'])
+        
+        DT_parameters.update( {"skb__k" : [i]} )
+
+        print "Running SLEECT K BEST {}".format(i)
+        
+        cv_DT = create_classifier_pipeline_gs("DT", my_dataset, features_list, 
+                                    parameters = DT_parameters)
+        
+        dt_best = cv_DT.best_estimator_
+        print "Best parameters for dt"
+        print ""
+        print cv_DT.best_params_
+        k_results.update({i :test_classifier_verbose(dt_best, my_dataset, features_list)})
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, axisbg="1.0")
+    
+    x = [result for result in k_results.iterkeys()]
+    prec = [k_results[result][1] for result in k_results.iterkeys()]
+    rec = [k_results[result][2] for result in k_results.iterkeys()]
+    f1 = [k_results[result][3] for result in k_results.iterkeys()]
+    
+    plt.title('DT Select K Best Tuning')
+    plt.xlabel('Amount of Features')
+    plt.ylabel('Probability')
+    
+    ax.plot(x, prec, label = "Precision")
+    ax.plot(x, rec, label = "Recall")
+    ax.plot(x, f1, label = "F1")
+    ax.legend(loc="upper left", bbox_to_anchor=(0.6,0.4))
+
+
+        
+        
+        
 
 ### Final classifer
 
@@ -226,14 +271,13 @@ if TUNE_DT:
 ### generates the necessary .pkl files for validating your results.
 
 
-clf = Pipeline(steps=[('min_max_scaler', MinMaxScaler(copy=True, feature_range=(0, 1))),  
+clf = Pipeline(steps=[('min_max_scaler', MinMaxScaler(copy=True, feature_range=(0, 1))),
+                      ('skb', SelectKBest(k=17)),
                       ('DT', DecisionTreeClassifier(class_weight='balanced', criterion='entropy',
             max_depth=2, max_features=None, max_leaf_nodes=None,
-            min_samples_leaf=4, min_samples_split=2,
+            min_samples_leaf=1, min_samples_split=2,
             min_weight_fraction_leaf=0.0, presort=False, random_state=42,
             splitter='best'))])
-    
-features_list = my_features
 
 test_classifier(clf, my_dataset, features_list)
 dump_classifier_and_data(clf, my_dataset, features_list)

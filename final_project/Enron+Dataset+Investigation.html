@@ -11844,7 +11844,7 @@ from_poi_to_this_person       60</code></pre>
 <p>My reasoning behind this is that I think POI will have a higher fraction of to/from messages to each other.  It's highly likely that POI's are going to be communicating with other POI's.  I think the fraction_to_poi will hold more value, as a POI may send global emails throughout the company, thus reaching a lot of employees - it is my hunch that a message TO a particular POI could indicate involvement with out POI's and thus making them a POI.
 I examined this in a scatterplot and highlighted POI values, it seems like this feature may have some impact on classifying POI's as the results suggest POI's communicate frequently between each other.</p>
 <p><img src="img/fract_img.png"></p>
-<h3 id="Feature-Selection">Feature Selection<a class="anchor-link" href="#Feature-Selection">&#182;</a></h3><p>I used <code>scikit-learn SelectKBest</code> to select best 10 influential features, the scores for the KBest features are seen below.</p>
+<h3 id="Feature-Selection">Feature Selection<a class="anchor-link" href="#Feature-Selection">&#182;</a></h3><p>I used <code>scikit-learn SelectKBest</code> to score each feature based upon the ANOVA F-value.  The ANOVA F-value is the default value for SelectKBest and works for classification / label tasks.</p>
 
 <pre><code>exercised_stock_options - 25.0975415287
 total_stock_value - 24.4676540475
@@ -11867,11 +11867,9 @@ to_messages - 1.69882434858
 deferral_payments - 0.21705893034
 from_messages - 0.164164498234
 restricted_stock_deferred - 0.0649843117237</code></pre>
-<p>This leaves me with the 10 most influential features being:</p>
-
-<pre><code>['exercised_stock_options', 'total_stock_value', 'bonus', 'salary', 'fraction_to_poi', 'deferred_income', 'long_term_incentive', 'restricted_stock', 'total_payments', 'shared_receipt_with_poi']</code></pre>
-<p>Notice how our engineeer feature <code>fraction_to_poi</code> makes an appearance in the top 10 features.
+<p>Notice how our engineeered feature <code>fraction_to_poi</code> makes an appearance in the top 10 features.
 It seems like most of a features are related to finace, only having two features related to emails in the final feature selection.</p>
+<p>During the pipline an exhaustive search of SelectKBest() where K Ranges from 2 - 21 has been conducted to determine the optimum value of features.</p>
 <h3 id="Feature-Scaling">Feature Scaling<a class="anchor-link" href="#Feature-Scaling">&#182;</a></h3><p>Most of my features had different units, some of the features had very big values therefore I needed to transform them. I used MinMaxScaler from sklearn to scale all my features to a given range (between 0 and 1).
 Feature scaling was added to the pipline chain.</p>
 <h2 id="Question-3">Question 3<a class="anchor-link" href="#Question-3">&#182;</a></h2><blockquote><p>What algorithm did you end up using? What other one(s) did you try? How did model performance differ between algorithms?  [relevant rubric item: “pick an algorithm”]</p>
@@ -11918,7 +11916,9 @@ Next I applied feature scaling and checked the results again.</p>
 <li>Min/Max Scale features</li>
 <li>Select K Best features</li>
 </ul>
-<p><code>GridSearchCV</code> has been used to tune each parameter within the classifier and compute the F1 score, the classifier parameters with the highest F1 score can then be selected.  Tuning the parameters of a classifier (sometimes referred to as <em>hyperparameters</em>) means to optimise the values of those parameters in order to enable the algorithm to perform its best on a given dataset.</p>
+<h4 id="Hyperparamter-tuning">Hyperparamter-tuning<a class="anchor-link" href="#Hyperparamter-tuning">&#182;</a></h4><p>In the context of machine learning, hyperparameters are parameters whose values are set before learning from a dataset has been undertaken.
+Tuning is selecting the best <strong>hyperparameters</strong> for an algorithm to optimise its performance in a working dataset from learned data. Tuning in machine learning is an automated process for selecting these parameters, for this we use the <code>GridSearchCV</code> package.</p>
+<p><code>GridSearchCV</code> has been used to automatically tune each parameter within the classifier and compute the F1 score, the classifier parameters with the highest F1 score can then be selected.</p>
 <p>The F1 score can be interpreted as a weighted average of the precision and recall, where an F1 score reaches its best value at 1 and worst score at 0. The relative contribution of precision and recall to the F1 score are equal. 
 <a href="http://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score">http://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score</a></p>
 <p><code>GridSearchCV</code> will perform the cross-validation internally. That is, using 'StratifiedShuffleSplit' as the cross-validation method, <code>GridSearchCV</code> will, internally, create the 1000 test/train splits and return the parameters for which the f1 score is highest.</p>
@@ -11947,21 +11947,48 @@ Next I applied feature scaling and checked the results again.</p>
 <td>0.07</td>
 <td>0.12</td>
 </tr>
+</tbody>
+</table>
+<h4 id="Feature-Selection">Feature Selection<a class="anchor-link" href="#Feature-Selection">&#182;</a></h4><p>During the hyperparameter-tuning process we can see how the value of K in <code>SelectKBest</code> features has been exhaustively tested.  It was found that 17 features was the optimum amount of features for maximised F1 score.</p>
+<p><img src="img/tune_k.png"></p>
+<table>
+<thead><tr>
+<th>Classifier</th>
+<th>Accuracy</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>F1</th>
+</tr>
+</thead>
+<tbody>
 <tr>
-<td><strong>Decision Tree</strong></td>
-<td><strong>0.83</strong></td>
-<td><strong>0.39</strong></td>
-<td><strong>0.56</strong></td>
-<td><strong>0.46 </strong></td>
+<td>DT  (Default 10 features)</td>
+<td>0.83</td>
+<td>0.39</td>
+<td>0.56</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td><strong>DT (17 Best Features) </strong></td>
+<td><strong> 0.84 </strong></td>
+<td><strong>0.43   </strong></td>
+<td><strong> 0.66  </strong></td>
+<td><strong> 0.53</strong></td>
 </tr>
 </tbody>
 </table>
-<p>The following parameters were best when using a decision tree:</p>
-<p><code>('DT', DecisionTreeClassifier(class_weight='balanced', criterion='entropy',
+<p>The following pipeline parameters were best when using a decision tree:</p>
+
+<pre><code>clf = Pipeline(steps=[('min_max_scaler', MinMaxScaler(copy=True, feature_range=(0, 1))),
+                      ('skb', SelectKBest(k=17)),
+                      ('DT', DecisionTreeClassifier(class_weight='balanced', criterion='entropy',
             max_depth=2, max_features=None, max_leaf_nodes=None,
-            min_samples_leaf=4, min_samples_split=2,
+            min_samples_leaf=1, min_samples_split=2,
             min_weight_fraction_leaf=0.0, presort=False, random_state=42,
-            splitter='best'))])</code></p>
+            splitter='best'))])</code></pre>
+<p>Final selected features:</p>
+
+<pre><code>exercised_stock_options, total_stock_value,bonus, salary, **fraction_to_poi,** deferred_income,long_term_incentive, restricted_stock, total_payments, shared_receipt_with_poi,loan_advances, expenses, from_poi_to_this_person, other,**fraction_from_poi**,from_this_person_to_poi, director_fees, to_messages,</code></pre>
 <h2 id="Question-5">Question 5<a class="anchor-link" href="#Question-5">&#182;</a></h2><blockquote><p>What is validation, and what’s a classic mistake you can make if you do it wrong? How did you validate your analysis?  [relevant rubric items: “discuss validation”, “validation strategy”]</p>
 </blockquote>
 <p>Validation is the process of checking the models predictions against data that hasn't be used to train the model. It addresses how effective the algorithm is at learning from training data in order to accurately label new test data.
@@ -11980,29 +12007,29 @@ In our case the number of folds is 1000, so the data is split into training / te
 <tbody>
 <tr>
 <td><strong>Accuracy </strong></td>
-<td>0.83</td>
+<td>0.84</td>
 </tr>
 <tr>
 <td><strong>Precision </strong></td>
-<td>0.39</td>
+<td>0.43</td>
 </tr>
 <tr>
 <td><strong>Recall </strong></td>
-<td>0.56</td>
+<td>0.66</td>
 </tr>
 <tr>
 <td><strong>F1   </strong></td>
-<td>0.46</td>
+<td>0.53</td>
 </tr>
 </tbody>
 </table>
 <ul>
 <li><p><strong>Recall</strong> - A measurement of how many items were correctly classified as positive out of the TOTAL positive items. 
 E.g. how many POI's were classified out of the TOTAL amount of POI's in the data.
-My final tuned classifier has <strong>recall of 56% </strong> - meaning out of all of the POI's in the dataset the tune classifier found 56% of them.</p>
+My final tuned classifier has <strong>recall of 66% </strong> - meaning out of all of the POI's in the dataset the tune classifier found 56% of them.</p>
 </li>
 <li><p><strong>Precision</strong> - A measurement of how many selected items were identified as relevant. e.g. how many POI's classified from the algorithm were actually a POI in the final dataset.
-The precision of my final classifier was <strong>39%</strong> meaning that out of all of the POI's classified 39% of them were relevant.</p>
+The precision of my final classifier was <strong>43%</strong> meaning that out of all of the POI's classified 39% of them were relevant.</p>
 </li>
 </ul>
 <ul>
@@ -12010,7 +12037,6 @@ The precision of my final classifier was <strong>39%</strong> meaning that out o
 </ul>
 <blockquote><p>F1 = 2 <em> (precision </em> recall) / (precision + recall)</p>
 </blockquote>
-<p>If I was to make future improvements to the classification pipeline I could also look at implementing parameter tuning for <code>SelectKBest</code> features and add further transformations such as PCA.  However my classifier meets the requirements for the project, so I chose to leave it there!</p>
 <h3 id="References">References<a class="anchor-link" href="#References">&#182;</a></h3><ul>
 <li>GridSearch and SSS - <a href="https://discussions.udacity.com/t/gridsearchcv-and-testingtraining-data/36107">https://discussions.udacity.com/t/gridsearchcv-and-testingtraining-data/36107</a></li>
 <li>Pipeline - <a href="http://scikit-learn.org/stable/auto_examples/model_selection/grid_search_text_feature_extraction.html">http://scikit-learn.org/stable/auto_examples/model_selection/grid_search_text_feature_extraction.html</a></li>
@@ -12018,6 +12044,7 @@ The precision of my final classifier was <strong>39%</strong> meaning that out o
 <li>Cheatsheet - <a href="http://scikit-learn.org/stable/tutorial/machine_learning_map/">http://scikit-learn.org/stable/tutorial/machine_learning_map/</a></li>
 <li>F1 - <a href="http://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score">http://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html#sklearn.metrics.f1_score</a></li>
 <li>GridSearch - <a href="https://discussions.udacity.com/t/select-the-best-classifier-through-selectskbest-gridsearchcv/212664/5">https://discussions.udacity.com/t/select-the-best-classifier-through-selectskbest-gridsearchcv/212664/5</a></li>
+<li>Machine Tuning - <a href="https://stackoverflow.com/questions/22903267/what-is-tuning-in-machine-learning">https://stackoverflow.com/questions/22903267/what-is-tuning-in-machine-learning</a></li>
 </ul>
 
 </div>
